@@ -7,7 +7,7 @@ import torch.utils.data
 from tqdm import tqdm
 import numpy as np
 
-from src.modelV1 import CFL
+from src.model import CFL
 from utils.arguments import get_arguments, get_config
 from utils.arguments import print_config_summary
 from utils.eval_utils import linear_model_eval, plot_clusters, append_tensors_to_lists, concatenate_lists, aggregate
@@ -30,6 +30,8 @@ def eval(data_loader, config):
     model = CFL(config)
     # Load the model
     model.load_models()
+    model.load_conventional()
+    config['modelConventional'] = model.modelConventional
     # model.options["add_noise"] = True
 
     
@@ -142,7 +144,8 @@ def evalulate_models(data_loader, model, config, plot_suffix="_Test", mode='trai
             # Turn xi to tensor, and move it to the device
             Xbatch = model._tensor(xi)
             # Extract latent
-            _, latent, _ = encoder(Xbatch) # decoded
+            latent,_ = encoder(Xbatch) # decoded
+            # print(latent)
             # Collect latent
             latent_list.append(latent)
 
@@ -186,7 +189,7 @@ def evalulate_models(data_loader, model, config, plot_suffix="_Test", mode='trai
                 # Turn xi to tensor, and move it to the device
                 Xbatch = model._tensor(xi)
                 # Extract latent
-                _, latent, _ = encoder(Xbatch) # decoded
+                latent,_= encoder(Xbatch) # decoded
                 # Collect latent
                 latent_list.append(latent)
 
@@ -356,7 +359,7 @@ def main(config):
     # Set directories (or create if they don't exist)
     set_dirs(config)
     # Get data loader for first dataset.
-    ds_loader = Loader(config, dataset_name=config["dataset"], drop_last=False)
+    ds_loader = Loader(config, dataset_name=config["dataset"], drop_last=True)
     # Add the number of features in a dataset as the first dimension of the model
     config = update_config_with_model_dims(ds_loader, config)
     # Start evaluation

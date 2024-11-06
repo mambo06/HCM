@@ -8,8 +8,8 @@ shallow_architecture: true        # If True, we use shallow encoder/decoder arch
 # Architecture-related params
 # The dimension of input features is added automatically, so it does not need to be defined here.
 dims:                             # Autoencoder architecture - This is for Encoder - Decoder is symmetric to Encoder.
-  - 272                           # Hidden. 
-  - 272
+  - 136                           # Hidden. 
+  - 136
 
 isBatchNorm: true                # Set True to use BatchNorm layer
 isDropout: true                  # Set True to use Dropout layer
@@ -20,14 +20,16 @@ p_norm: 2                         # p-value used for normalization. p=2 for L2 n
 
 # Parameters for training
 dropout_rate: 0.2                 # Set dropout rate if Dropout is being used
-learning_rate: 0.0055              # Learning rate for training
+learning_rate: 0.01              # Learning rate for training
 # epochs: 5                        # Number of epochs to use for training
-batch_size: 272                    # Set batch size
-nth_epoch: 1                      # Compute validation loss in every nth_epoch
-validate: false                   # Whether to compute validation loss
-scheduler: true                  # If True, turns on scheduler for learning rate.
-validateScore: false            # if true either rmse or accuracy is used, loss otherwise
-validation: false
+batch_size: 136                    # Set batch size
+nth_epoch: 1                   # Compute validation loss in every nth_epoch
+
+scheduler: false                  # If True, turns on scheduler for learning rate.
+reduce_lr: true                 # steps when loss stuck
+
+validateScore: false          # validate with conventional model
+validation: false              # validate with loss only
 
 # Options for subsetting
 n_subsets: 2                      # Use at least 2 when using a single view. 
@@ -39,7 +41,7 @@ aggregation: mean                 # options:  mean (default), sum, max, min, and
 # Noise-related options
 add_noise: true                   # If True, it adds noise. The noise type is defined in "noise_type"
 noise_type: gaussian_noise            # Type of noise to add to. Choices: swap_noise, gaussian_noise, zero_out
-masking_ratio: [0.1,0.1]                # Percentage of the feature to add noise to binomial, all applied
+masking_ratio: [0.,0.]                # Percentage of the feature to add noise to binomial, all applied
 noise_level: [0.1,0.1]                  # Stdev defined for Gaussian noise
 
 # Data

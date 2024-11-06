@@ -19,7 +19,7 @@ normalize: true                   # If True, we do L2 normalization on latent va
 p_norm: 2                         # p-value used for normalization. p=2 for L2 norm, p=1 for L1 norm and so on.
 
 # Parameters for training
-dropout_rate: 0.3                 # Set dropout rate if Dropout is being used
+dropout_rate: 0.001                 # Set dropout rate if Dropout is being used
 learning_rate: 0.0055              # Learning rate for training
 # epochs: 5                        # Number of epochs to use for training
 batch_size: 256                    # Set batch size
@@ -39,7 +39,7 @@ aggregation: mean                 # options:  mean (default), sum, max, min, and
 # Noise-related options
 add_noise: true                   # If True, it adds noise. The noise type is defined in "noise_type"
 noise_type: gaussian_noise            # Type of noise to add to. Choices: swap_noise, gaussian_noise, zero_out
-masking_ratio: [0.1,0.1]                # Percentage of the feature to add noise to binomial, all applied
+masking_ratio: [0.,0.]                # Percentage of the feature to add noise to binomial, all applied
 noise_level: [0.2,0.2]                  # Stdev defined for Gaussian noise
 
 # Data

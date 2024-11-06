@@ -5,6 +5,7 @@ import torch as th
 import torch.nn.functional as F
 from torch.nn import BCELoss
 from torch import nn
+# import torch
 
 
 def getMSEloss(recon, target):
@@ -21,12 +22,25 @@ def getMSEloss(recon, target):
     return loss
 
 
+def contrastive_loss(output1, output2, labels, margin=1):
+    euclidean_distance = th.pairwise_distance(output1, output2,p=1.0, eps=1e-03)
+    loss_contrastive = th.mean(
+        th.clamp(th.mean(labels)-labels,min=0.0) * th.pow(euclidean_distance, 2) +
+        th.clamp(labels-th.mean(labels),min=0.0) * th.pow(margin - euclidean_distance,2)
+    )
+    # loss_contrastive = th.mean(euclidean_distance)
+    return loss_contrastive
+
+
 def getMAELoss(recon, target):
     dims = list(target.size())
     bs = dims[0]
     loss = nn.L1Loss()
     loss = th.sum(loss(recon, target)) / bs
     return loss
+
+def getHuber(recon,target):
+    return F.huber_loss(recon,target)
 
 def getBCELoss(prediction, label):
     """
@@ -98,7 +112,7 @@ class JointLoss(th.nn.Module):
         # Reshape y: (2N, C) -> (1, C, 2N)
         y = y.T.unsqueeze(0)
         # Similarity shape: (2N, 2N)
-        similarity = th.tensordot(x, y, dims=2)
+        similarity = th.mean(th.tensordot(x, y, dims=2))
         return similarity
 
     def _cosine_simililarity(self, x, y):
@@ -135,7 +149,7 @@ class JointLoss(th.nn.Module):
         # Return contrastive loss
         return closs
 
-    def forward(self, representation, xrecon, xorig):
+    def forward(self, logit, predictions, label=None):
         """
 
         Args:
@@ -145,24 +159,53 @@ class JointLoss(th.nn.Module):
 
         """
 
-        # recontruction loss
-        recon_loss = getMSEloss(xrecon, xorig) if self.options["reconstruction"] else getBCELoss(xrecon, xorig)
+        if (label == None):
+            a, b = logit, predictions.reshape(-1,1)
 
-        # Initialize contrastive and distance losses with recon_loss as placeholder
-        closs, zrecon_loss = recon_loss, recon_loss
+            a1 = a[:self.options['batch_size'], :] 
+            a2 = a[self.options['batch_size']:, :]
+            a = th.cat((a1, a2), dim=1)
 
-        # Start with default loss i.e. reconstruction loss
-        loss = recon_loss
+            b1 = b[:self.options['batch_size'], :] 
+            b2 = b[self.options['batch_size']:, :]
+            b = th.cat((b1, b2), dim=1) 
+            
+            loss = getMSEloss(a, b)
+        else:
+            a, b = logit, predictions.reshape(-1,1)
+            c = label.reshape(-1,1)
+            a = th.cat((a, c), dim=1)
+            b = th.cat((b, c), dim=1)
+            loss = contrastive_loss(a, b, c)
 
-        if self.options["contrastive_loss"]:
-            closs = self.XNegloss(representation)
-            loss = loss + closs
+        """
 
-        if self.options["distance_loss"]:
-            # recontruction loss for z
-            zi, zj = th.split(representation, self.batch_size)zrecon_loss = getMSEloss(zi, zj)
-            # print(zrecon_loss)
-            loss = loss + zrecon_loss
+         a, b = logit, predictions.reshape(-1,1)
 
+        a1 = a[:self.options['batch_size'], :] 
+        a2 = a[self.options['batch_size']:, :]
+        
+
+        b1 = b[:self.options['batch_size'], :] 
+        b2 = b[self.options['batch_size']:, :]
+
+        a = th.cat((a1, b1), dim=1)
+        b = th.cat((b2, a2), dim=1) 
+
+        if (label == None):
+            
+            loss = getMSEloss(a, b)
+        else:
+            # a, b = logit, predictions.reshape(-1,1)
+            c = label.reshape(-1,1)
+            c1 = c[:self.options['batch_size'], :] 
+            # c2 = c[self.options['batch_size']:, :]
+            # c = th.cat((c1, c2), dim=1)
+
+            # a = th.cat((a, c), dim=1)
+            # b = th.cat((b, c), dim=1)
+            loss = contrastive_loss(a, b, c1)
+
+        """
         # Return
-        return loss, closs, recon_loss, zrecon_loss
+        return loss

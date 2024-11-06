@@ -22,10 +22,11 @@ p_norm: 2                         # p-value used for normalization. p=2 for L2 n
 dropout_rate: 0.1                 # Set dropout rate if Dropout is being used
 learning_rate: 0.0055              # Learning rate for training
 # epochs: 5                        # Number of epochs to use for training
-batch_size: 180                    # Set batch size
+batch_size: 360                    # Set batch size
 nth_epoch: 1                      # Compute validation loss in every nth_epoch
 validate: false                   # Whether to compute validation loss
-scheduler: true                  # If True, turns on scheduler for learning rate.
+scheduler: false                  # If True, turns on scheduler for learning rate.
+reduce_lr: true
 validateScore: false            # if true either rmse or accuracy is used, loss otherwise
 validation: false
 
@@ -50,6 +51,7 @@ validation_data_ratio : 0.3       # Percentage of validation set e.g. training_d
 # Losses to use
 contrastive_loss: true            # If True, the contrastive loss is added to the total loss.
 distance_loss: true               # If True, the distance loss is added to the total loss.
+cosine_similarity: false
 
 # Options for loss functions
 tau: 0.1                          # Temperature parameter used in NTXentLoss

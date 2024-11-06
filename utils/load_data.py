@@ -21,13 +21,15 @@ from os.path import isfile, join
 from pathlib import Path
 from category_encoders import LeaveOneOutEncoder
 from sklearn.preprocessing import OrdinalEncoder
+from sklearn.metrics import mean_squared_error
 
+from utils.projection_utils import head, projection
 
 
 class Loader(object):
     """ Data loader """
 
-    def __init__(self, config, dataset_name, drop_last=True, kwargs={}):
+    def __init__(self, config, dataset_name, drop_last=True, **kwargs):
         """Pytorch data loader
 
         Args:
@@ -45,29 +47,33 @@ class Loader(object):
         paths = config["paths"]
         # data > dataset_name
         file_path = os.path.join(paths["data"], dataset_name)
+        self.modelCoventional = kwargs.get('modelCoventional')
         # Get the datasets
         train_dataset, test_dataset, validation_dataset = self.get_dataset(dataset_name, file_path)
         # Set the loader for training set
-        self.train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True, drop_last=drop_last, **kwargs)
+        self.train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True, drop_last=drop_last )
+        # print('loader :',self.modelCoventional)
         # Set the loader for test set
-        self.test_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False, drop_last=drop_last, **kwargs)
+        self.test_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False, drop_last=drop_last)
         # Set the loader for validation set
-        self.validation_loader = DataLoader(validation_dataset, batch_size=batch_size, shuffle=True, drop_last=drop_last, **kwargs)
-
+        self.validation_loader = DataLoader(validation_dataset, batch_size=batch_size, shuffle=True, drop_last=drop_last)
+        
         
     def get_dataset(self, dataset_name, file_path):
         
         """Returns training, validation, and test datasets"""
+        # need to improve to avoid redundant data loader
         
-        loader_map = {'default_loader': TabularDataset}
-      
-        dataset = loader_map[dataset_name] if dataset_name in loader_map.keys() else loader_map['default_loader']
+        
+        dataset = TabularDataset
 
-        train_dataset = dataset(self.config, datadir=file_path, dataset_name=dataset_name, mode='train')
+        train_dataset = dataset(self.config, datadir=file_path, dataset_name=dataset_name, mode='train', modelCoventional = self.modelCoventional )
         test_dataset = dataset(self.config, datadir=file_path, dataset_name=dataset_name, mode='test')
         val_dataset = dataset(self.config, datadir=file_path, dataset_name=dataset_name, mode='validation')
+
        
         return train_dataset, test_dataset, val_dataset
+
 
 
 class ToTensorNormalize(object):
@@ -78,7 +84,7 @@ class ToTensorNormalize(object):
 
 
 class TabularDataset(Dataset):
-    def __init__(self, config, datadir, dataset_name, mode='train', transform=ToTensorNormalize()):
+    def __init__(self, config, datadir, dataset_name, mode='train', transform=ToTensorNormalize(), **kwargs):
         """Dataset class for tabular data format.
 
         Args:
@@ -97,6 +103,10 @@ class TabularDataset(Dataset):
         self.data_path = os.path.join(self.paths["data"], dataset_name)
         self.data, self.labels = self._load_data()
         self.transform = transform
+        modelCoventional = kwargs.get('modelCoventional')
+        if modelCoventional is not None :
+            self.modelCoventional = modelCoventional
+            self.loadConventionalModel()
         
 
     def __len__(self):
@@ -200,7 +210,7 @@ class TabularDataset(Dataset):
         # dirs = []
         dataset_name = self.config['dataset']
 
-        dir_ = 'data/'+ dataset_name 
+        dir_ = 'data/normal'+ dataset_name 
         if self.config['dataset'] in dirs : # if from other paper, datra not normalized
             # norm = 'l2' # overide for test
             N_train, N_test,N_val, y_train, y_test,y_val = self.joinData(cat_policy=self.config['cat_policy'],normalization=True, norm=self.config['norm'])
@@ -224,7 +234,8 @@ class TabularDataset(Dataset):
 
     def joinData(self, cat_policy='ohe',seed=int(9),normalization=False, norm="l1", id=True ):
         dataset_name = self.config['dataset']
-        dir_ = Path('data/'+ dataset_name )
+        dir_ = Path('data/'+ dataset_name + '/normal')
+        # dir_ = Path('data/'+ dataset_name )
         y_train = np.load(dir_.joinpath('y_train.npy'))
         y_test = np.load(dir_.joinpath('y_test.npy'))
         y_val = np.load(dir_.joinpath('y_val.npy'))
@@ -301,6 +312,13 @@ class TabularDataset(Dataset):
             idx = np.random.choice(range(result[0].shape[0]),int(result[0].shape[0]*self.config['sampling']), replace = False)
             result[0] = result[0][idx]
             y[0] = y[0][idx]
-        return result[0],result[1],result[2], y[0],y[1],y[2]
+        return result[0],result[1],result[2], y[0],y[1],y[2] #train , validation, test
+
+    def loadConventionalModel(self):
+        if self.mode=='train' :
+            self.modelCoventional.fit(self.data, self.labels)
+            print('Train RMSE: {} params {}'.format(np.sqrt(mean_squared_error(self.labels, self.modelCoventional.predict(self.data))),self.modelCoventional.coef_))
+        if self.mode=='test':
+            print('Test RMSE:', (self.labels, self.modelCoventional.predict(self.data)))
 
 
