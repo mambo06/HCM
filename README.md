@@ -1,4 +1,4 @@
-Implementation of paper "Dealing with Out of Distribution Problem in Prediction Tasks"
+Implementation of paper "Enhancing Classical Model with Deep Learning"
 
 To create a new environment:
 
